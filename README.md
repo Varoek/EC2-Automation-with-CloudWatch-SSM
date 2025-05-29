@@ -1,0 +1,1 @@
+Automate starting and stopping of a specific EC2 instance on a daily schedule using CloudWatch Events and AWS Systems Manager (SSM). This automation is cost-efficient and helps maintain operational uptime during business hours.
