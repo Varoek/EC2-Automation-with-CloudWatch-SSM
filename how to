@@ -1,0 +1,61 @@
+make sure to start this with this permission attached to your IAM Role
+
+    IAM Role attached to the EC2 instance:
+
+        AmazonSSMManagedInstanceCore
+        CloudWatchAgentServerPolicy
+        AmazonEC2ReadOnlyAccess
+        AmazonS3FullAccess (if logging or config sync is used)
+        AmazonEC2FullAccess
+
+  After that SSH to your Instances
+
+SSM Agent installed and running:
+
+sudo snap install amazon-ssm-agent --classic
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl start amazon-ssm-agent
+
+  Make sure its installed
+
+aws ssm describe-instance-information --region ap-southeast-1 (change the region base on your EC2 location)
+
+ Scheduled Automation Setup (you could change this based on your region UTC)
+ Stop EC2 Instance at 10PM Jakarta Time (UTC+7)
+
+aws events put-rule \
+  --name "StopEC2AtNight" \
+  --schedule-expression "cron(0 14 * * ? *)" \
+  --description "Stop EC2 instance at 10 PM Jakarta time (UTC+7)" \
+  --region ap-southeast-1
+
+  Start EC2 Instance at 6AM Jakarta Time (UTC+7)
+
+aws events put-rule \
+  --name "StartEC2InMorning" \
+  --schedule-expression "cron(0 23 * * ? *)" \
+  --description "Start EC2 instance at 6 AM Jakarta time (UTC+7)" \
+  --region ap-southeast-1
+
+After creating this rule you need to activated the rule
+
+  Associate Rules with Targets (SSM Automation)
+
+# Target EC2 instance ID
+INSTANCE_ID=i-09b7be14beb99f4f5
+
+# Attach SSM automation to Stop rule
+aws events put-targets \
+  --rule "StopEC2AtNight" \
+  --targets "Id"="1","Arn"="arn:aws:ssm:ap-southeast-1::automation-definition/AWS-StopEC2Instance","RoleArn"="arn:aws:iam::<YOUR_ACCOUNT_ID>:role/EC2Ruller","Input"="{\"InstanceId\":\"$INSTANCE_ID\"}"
+
+# Attach SSM automation to Start rule
+aws events put-targets \
+  --rule "StartEC2InMorning" \
+  --targets "Id"="1","Arn"="arn:aws:ssm:ap-southeast-1::automation-definition/AWS-StartEC2Instance","RoleArn"="arn:aws:iam::<YOUR_ACCOUNT_ID>:role/EC2Ruller","Input"="{\"InstanceId\":\"$INSTANCE_ID\"}"
+
+     Replace <YOUR_ACCOUNT_ID> with your actual AWS account ID.
+
+Notes
+
+    This setup avoids custom Lambda functions and uses native AWS automation.
